@@ -1,4 +1,6 @@
 ASCIIRunner
 ===========
+(c) 2014 Uros Gojkovic and Djordje Jovic
 
-ASCIIRunner is 2D platforming game built using C++(11) and ncurses library, with some Qt in it.
+ASCIIRunner is a 2D platforming game for Linux, built using C++(11) and ncurses library, with some Qt version 5 in it.
+Features randomly generated levels as well the option for user made ones.
