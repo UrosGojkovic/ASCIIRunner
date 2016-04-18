@@ -1,0 +1,5 @@
+2016-04-19  Uros Gojkovic  <uros.gojkovic@hotmail.com> 
+
+ * asciirenderengine.h: refactored the code
+    added Pos and Size structs instead of _pos[2] and _size[2] arrays
+    all coments are updated and in English now

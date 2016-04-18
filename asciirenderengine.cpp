@@ -14,7 +14,7 @@ Renderer::Renderer()
   _viewportPos[0]=0;
   _viewportSize[0]=25;
   _viewportSize[1]=80;
-  _spriteLayer=0;
+  _mainLayer=0;
 }
 
 Renderer::Renderer(InitParams ini)
@@ -61,7 +61,7 @@ Renderer::Renderer(InitParams ini)
   _viewportSize[0]=ini.prefViewportSize[0];
   _viewportSize[1]=ini.prefViewportSize[1];
   _activeItems=ini.activeObjectList;
-  _spriteLayer=ini.spriteLayer;
+  _mainLayer=ini.mainLayer;
   _prefRelPlayerPos[0]=ini.playerRelPosition[0];
   _prefRelPlayerPos[1]=ini.playerRelPosition[1];
 
@@ -293,7 +293,7 @@ void Renderer::doCompositing()
         }
       }
     }
-    if(l==_spriteLayer)
+    if(l==_mainLayer)
     {
       drawObjects();
     }
@@ -333,7 +333,7 @@ void Renderer::updateScreen()
   refresh();
 }
 
-void Renderer::updateRelPlayerPos(unsigned int rPos, unsigned int cPos)
+void Renderer::updateRelCameraPos(unsigned int rPos, unsigned int cPos)
 {
   _prefRelPlayerPos[0]=rPos;
   _prefRelPlayerPos[1]=cPos;
@@ -642,9 +642,9 @@ void Renderer::checkLevelCollision(unsigned int AOindex)
   trace.flush();
   trace<<"number of layers is "<<_currentLevel.layerCount()<<endl;
   trace.flush();
-  trace<<"sprite layer is: "<<_spriteLayer<<endl;
+  trace<<"sprite layer is: "<<_mainLayer<<endl;
   trace.flush();
-  LevelLayer layer=*_currentLevel.getLayer(_spriteLayer);
+  LevelLayer layer=*_currentLevel.getLayer(_mainLayer);
   trace<<"got copy of layer"<<endl;
   trace.flush();
   vector<chtype> row;
@@ -797,7 +797,7 @@ chtype Renderer::doTransparency(chtype bottom, chtype top)
 
 void Renderer::calculateViewportPos()
 {
-  LevelLayer* spriteLayer=_currentLevel.getLayer(_spriteLayer);
+  LevelLayer* spriteLayer=_currentLevel.getLayer(_mainLayer);
   bool adjustedRow=false;
   bool adjustedCol=false;
   int rawViewportPos[2];
@@ -856,12 +856,12 @@ void ActiveObject::move(int rPos, int cPos)
 
 int ActiveObject::rowPos()
 {
-  return this->_pos[0];
+  return _pos[0];
 }
 
 int ActiveObject::colPos()
 {
-  return this->_pos[1];
+  return _pos[1];
 }
 
 unsigned int ActiveObject::height()
@@ -874,14 +874,19 @@ unsigned int ActiveObject::width()
   return _size[1];
 }
 
-void ActiveObject::die()
+void ActiveObject::disable()
 {
-  _alive=false;
+  _enabled=false;
 }
 
-bool ActiveObject::isAlive()
+void ActiveObject::enable()
 {
-  return _alive;
+  _enabled=true;
+}
+
+bool ActiveObject::isEnabled()
+{
+  return _enabled;
 }
 
 void ActiveObject::changeSprites(vector<vector<vector<chtype> > > frames)
@@ -889,19 +894,24 @@ void ActiveObject::changeSprites(vector<vector<vector<chtype> > > frames)
   _aniFrames=frames;
 }
 
+int ActiveObject::id()
+{
+  return _id;
+}
+
 Level::Level()
 {
 }
 
-Level::Level(const string levelPath, const string levelColorPath)
+Level::Level(const string uncookedLevelPath, const string levelColorPath)
 {
   ofstream trace;
   trace.open("traceLevelConstructor.txt");
   ifstream level;
   ifstream levelColor;
-  level.open(levelPath);
+  level.open(uncookedLevelPath);
   levelColor.open(levelColorPath);
-  trace<<levelPath<<" "<<levelColorPath<<endl;
+  trace<<uncookedLevelPath<<" "<<levelColorPath<<endl;
   trace.flush();
   level>>_numLayers;
   trace<<"num of layers: "<<_numLayers<<endl;

@@ -33,7 +33,7 @@ Game::Game(QCoreApplication* parent)
       ini.level=newRandomLevel();
       trace<<"splash screen generated"<<endl;
       trace.flush();
-      ini.spriteLayer=1;
+      ini.mainLayer=1;
       ini.prefViewportSize[0]=25;
       ini.prefViewportSize[1]=80;
       ini.playerRelPosition[0]=14;
@@ -54,7 +54,7 @@ Game::Game(QCoreApplication* parent)
     ini.levelPath="./static/";
     trace<<"splash screen generated"<<endl;
     trace.flush();
-    ini.spriteLayer=3;
+    ini.mainLayer=3;
     ini.prefViewportSize[0]=25;
     ini.prefViewportSize[1]=80;
     ini.playerRelPosition[0]=14;
@@ -538,7 +538,7 @@ void Coin::collision(ASCIIRenderEngine::direction_enum direction, ASCIIRenderEng
 {
   if(other->id()==player)
   {
-    this->die();
+    this->disable();
   }
 }
 
