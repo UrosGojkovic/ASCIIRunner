@@ -137,5 +137,6 @@ namespace ASCIIRenderEngine
     Pos _prefRelViewportPos; //remembers the prefered position of the viewport relative to the 0th AO, in cases where we hit the border of the level
     Size _viewportSize; //the size of a viewport
     Pos _oldObjectPos; //helper variable when determining collision
+  };
 }
 #endif // ASCIIRENDERENGINE_H

@@ -43,14 +43,14 @@ Renderer::Renderer(InitParams ini)
     printw("Can't change colors, using default.\n");
   }
 
-  if(ini.numberOfPairsUsed!=0)
+  if(ini.numberOfPairsUsed!=0) //initialize
   {
-    for(int i=0; i<ini.numberOfPairsUsed; i++) //prepisujemo prvih nekoliko parova sa user-defined vrednostima
+    for(int i=0; i<ini.numberOfPairsUsed; i++)
     {
       init_pair(i, ini.colorPairs[i][0], ini.colorPairs[i][1]);
     }
   }
-  else //define default 64 pairs, except 0th, since we can't do it through init_pair
+  else //define default 64 pairs, minus 0th, since we can't do it through init_pair
   {
     int pair=1;
     for(int i=0; i<8; i++)
@@ -63,7 +63,7 @@ Renderer::Renderer(InitParams ini)
     }
   }
   _viewportSize.y=ini.prefViewportSize.y;
-  _viewportSize.x=ini.prefViewportSize.y;
+  _viewportSize.x=ini.prefViewportSize.x;
   _activeItems=ini.activeObjectList;
   _mainLayer=ini.mainLayer;
   _prefRelViewportPos.y=ini.cameraRelPosition.y;
@@ -176,12 +176,11 @@ Renderer::Renderer(InitParams ini)
         loadSprites(ini.levelPath+aoPath);
       }
     }
-    trace.close();
   }
   if(getmaxx(stdscr)!=ini.prefViewportSize.x && getmaxy(stdscr)!=ini.prefViewportSize.y)
   {
     printw("This game is meant to be played in a %d x %d characters window, but the game can't resize it automatically.\nPlease resize the window, or hit Enter to quit.", ini.prefViewportSize.x, ini.prefViewportSize.y);
-    while(getmaxx(stdscr)!=ini.prefViewportSize.x && getmaxy(stdscr)!=ini.prefViewportSize.y)
+    while(getmaxx(stdscr)<ini.prefViewportSize.x && getmaxy(stdscr)<ini.prefViewportSize.y)
     {
       if(getch()==KEY_ENTER)
       {
@@ -240,7 +239,7 @@ void Renderer::doCompositing()
       {
         row=layer->getRow(rL);
       }
-      for(unsigned int cS=0; cS<_viewportSize[1]; cS++)
+      for(unsigned int cS=0; cS<_viewportSize.x; cS++)
       {
         cL=(int)(_viewportPos.x*layer->relativeSpeed());
         cL+=cS;
@@ -302,6 +301,7 @@ void Renderer::doTick()
       _oldObjectPos.y=_activeItems[i]->rowPos();
       _oldObjectPos.x=_activeItems[i]->colPos();
       _activeItems[i]->tick();
+      checkCollision(i);
     }
   }
 }
@@ -477,8 +477,8 @@ void Renderer::checkAObjectsCollision(unsigned int AOindex)
         if(_activeItems[i]->colPos()>=colPos && _activeItems[i]->colPos()<=(colPos+_activeItems[AOindex]->width()-1))
         {
           //there is collision
-          int horVector=_activeItems[i]->colPos()-_oldObjectPos[1];
-          int verVector=_activeItems[i]->rowPos()-_oldObjectPos[0];
+          int horVector=_activeItems[i]->colPos()-_oldObjectPos.x;
+          int verVector=_activeItems[i]->rowPos()-_oldObjectPos.y;
           if(verVector==0)
           {
             if(horVector<0)
@@ -561,8 +561,8 @@ void Renderer::checkLevelCollision(unsigned int AOindex)
           if(t!=' ')
           {
             //collision detected
-            int horVector=colPos-_oldObjectPos[1];
-            int verVector=rowPos-_oldObjectPos[0];
+            int horVector=colPos-_oldObjectPos.x;
+            int verVector=rowPos-_oldObjectPos.y;
             int newColPos=colPos;
             int newRowPos=rowPos;
             if(horVector<0)
@@ -705,7 +705,7 @@ void Renderer::calculateViewportPos()
     _viewportPos.y=spriteLayer->rows()-_viewportSize.y;
     adjustedRow=true;
   }
-  if(rawViewportEdge,x>=spriteLayer->cols())
+  if(rawViewportEdge.x>=spriteLayer->cols())
   {
     _viewportPos.x=spriteLayer->cols()-_viewportSize.x;
     adjustedCol=true;
@@ -716,7 +716,7 @@ void Renderer::calculateViewportPos()
   }
   if(adjustedCol==false)
   {
-    _viewportPos[1]=_activeItems[0]->colPos()-_prefRelViewportPos.x;
+    _viewportPos.x=_activeItems[0]->colPos()-_prefRelViewportPos.x;
   }
 }
 

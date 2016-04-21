@@ -12,7 +12,6 @@ QMAKE_LFLAGS += -lncurses
 
 SOURCES += main.cpp \
     asciirenderengine.cpp \
-    Generisi.cpp \
     asciirunner.cpp
 
 HEADERS += \
