@@ -17,6 +17,5 @@ SOURCES += main.cpp \
 
 HEADERS += \
     asciirenderengine.h \
-    asciirunner.h \
-    Generisi.h
+    asciirunner.h
 

@@ -78,7 +78,7 @@ namespace ASCIIRenderEngine
   {
   public:
     Level();
-    Level(const string uncookedLevelPath, const string levelColorPath); //loads a level from files: first is the layout, second are color pairs
+    Level(const string uncookedLevelPath, const string levelColorPath); //loads a level from files: first is the layout, second are color pairs, currently the parser is very brittle
     Level(const string cookedLevelPath); //loads a level file containing chtype array written as numbers, WORK IN PROGRESS
     Level(vector<LevelLayer> layers); //generates a level from an array of layers, meant for proceduraly generated levels
     Level(const Level& level); //copy constructor (?)
@@ -87,14 +87,14 @@ namespace ASCIIRenderEngine
 
   private:
     vector<LevelLayer> _layers;
-    unsigned int _numLayers; //could probably use _layers.size instead
+    unsigned int _numLayers; //stores number of layers when loading from a file
   };
 
   typedef struct _ini
   {
     vector<ActiveObject*> activeObjectList; //"camera" is always first in the list
-    int mainLayer; //the layer where all/most action takes place, preparation for allowing AO to be placed on any layer
-    int levelType; //generated or loaded from a file, probably should be an enum
+    int mainLayer; //the layer where all/most action takes place, renamed from sprite layer in preparation for allowing AO to be placed on any layer; count starts from 0
+    int levelType; //0 - characters are separate from color, 1 - each character is a chtype written as an integer in text, probably should be an enum
     string levelPath=""; //path to folder which contains the level files
     Level level; //optional, used for generated levels
     Size prefViewportSize; //used when testing the terminal for the right conditions
@@ -134,7 +134,7 @@ namespace ASCIIRenderEngine
     Level _currentLevel;
     Pos _viewportPos; //position of viewport relative to the main layer
     unsigned int _mainLayer;
-    Pos _prefRelPlayerPos; //remembers the prefered position of the camera relative to the viewport, in cases where we hit the border of the level
+    Pos _prefRelViewportPos; //remembers the prefered position of the viewport relative to the 0th AO, in cases where we hit the border of the level
     Size _viewportSize; //the size of a viewport
     Pos _oldObjectPos; //helper variable when determining collision
 }

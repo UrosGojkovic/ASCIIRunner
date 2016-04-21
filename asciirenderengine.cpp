@@ -10,10 +10,10 @@ Renderer::Renderer()
   if(start_color()==ERR)
     printw("Can't start colors.\n");
   raw();
-  _viewportPos[0]=0;
-  _viewportPos[0]=0;
-  _viewportSize[0]=25;
-  _viewportSize[1]=80;
+  _viewportPos.y=0;
+  _viewportPos.x=0;
+  _viewportSize.y=25;
+  _viewportSize.x=80;
   _mainLayer=0;
 }
 
@@ -30,27 +30,11 @@ Renderer::Renderer(InitParams ini)
   nodelay(stdscr, TRUE);
   if(can_change_color())
   {
-    if(ini.numberOfColorsUsed!=0)
+    if(ini.numberOfColorsUsed!=0) //initialize colors if possible
     {
-      for(int i=0; i<ini.numberOfColorsUsed; i++) //definisemo boje
+      for(int i=0; i<ini.numberOfColorsUsed; i++)
       {
         init_color(i, ini.colors[i][0], ini.colors[i][1], ini.colors[i][2]);
-      }
-    }
-    int pair=1;
-    for(int i=0; i<8; i++) //definisemo podrazumevane parove
-    {
-      for(int j=0; j<8; j++)
-      {
-        init_pair(pair, i, j);
-        pair++;
-      }
-    }
-    if(ini.numberOfPairsUsed!=0)
-    {
-      for(int i=0; i<ini.numberOfPairsUsed; i++) //prepisujemo prvih nekoliko parova sa user-defined vrednostima
-      {
-        init_pair(i, ini.colorPairs[i][0], ini.colorPairs[i][1]);
       }
     }
   }
@@ -58,12 +42,32 @@ Renderer::Renderer(InitParams ini)
   {
     printw("Can't change colors, using default.\n");
   }
-  _viewportSize[0]=ini.prefViewportSize[0];
-  _viewportSize[1]=ini.prefViewportSize[1];
+
+  if(ini.numberOfPairsUsed!=0)
+  {
+    for(int i=0; i<ini.numberOfPairsUsed; i++) //prepisujemo prvih nekoliko parova sa user-defined vrednostima
+    {
+      init_pair(i, ini.colorPairs[i][0], ini.colorPairs[i][1]);
+    }
+  }
+  else //define default 64 pairs, except 0th, since we can't do it through init_pair
+  {
+    int pair=1;
+    for(int i=0; i<8; i++)
+    {
+      for(int j=0; j<8; j++)
+      {
+        init_pair(pair, i, j);
+        pair++;
+      }
+    }
+  }
+  _viewportSize.y=ini.prefViewportSize.y;
+  _viewportSize.x=ini.prefViewportSize.y;
   _activeItems=ini.activeObjectList;
   _mainLayer=ini.mainLayer;
-  _prefRelPlayerPos[0]=ini.playerRelPosition[0];
-  _prefRelPlayerPos[1]=ini.playerRelPosition[1];
+  _prefRelViewportPos.y=ini.cameraRelPosition.y;
+  _prefRelViewportPos.x=ini.cameraRelPosition.x;
 
   if(ini.levelPath=="")
   {
@@ -71,13 +75,9 @@ Renderer::Renderer(InitParams ini)
   }
   else
   {
-    ofstream trace;
-    trace.open("traceLoadStaticLevel.txt");
     ifstream levelManifest;
     string fullPath=ini.levelPath+"level.manifest";
     levelManifest.open(fullPath);
-    trace<<fullPath<<endl;
-    trace.flush();
     string tag;
     string colorPath="";
     string levelPath="";
@@ -91,38 +91,26 @@ Renderer::Renderer(InitParams ini)
       if(tag=="t")
       {
         levelManifest>>type;
-        trace<<"type: "<<type<<endl;
-        trace.flush();
       }
       else if(tag=="c")
       {
         levelManifest>>colorPath;
-        trace<<colorPath<<endl;
-        trace.flush();
       }
       else if(tag=="l")
       {
         levelManifest>>levelPath;
-        trace<<levelPath<<endl;
-        trace.flush();
       }
       else if(tag=="lc")
       {
         levelManifest>>levelColorPath;
-        trace<<levelColorPath<<endl;
-        trace.flush();
       }
       else if(tag=="ao")
       {
         levelManifest>>aoPath;
-        trace<<aoPath<<endl;
-        trace.flush();
       }
       else if(tag=="aoc")
       {
         levelManifest>>aoColorPath;
-        trace<<aoColorPath<<endl;
-        trace.flush();
       }
     }
     levelManifest.close();
@@ -171,8 +159,6 @@ Renderer::Renderer(InitParams ini)
       if(type==0)
       {
         _currentLevel=Level(ini.levelPath+levelPath, ini.levelPath+levelColorPath);
-        trace<<ini.levelPath+levelPath<<" "<<ini.levelPath+levelColorPath<<endl;
-        trace.flush();
       }
       else if(type==1)
       {
@@ -192,10 +178,10 @@ Renderer::Renderer(InitParams ini)
     }
     trace.close();
   }
-  if(getmaxx(stdscr)!=ini.prefViewportSize[1] && getmaxy(stdscr)!=ini.prefViewportSize[0])
+  if(getmaxx(stdscr)!=ini.prefViewportSize.x && getmaxy(stdscr)!=ini.prefViewportSize.y)
   {
-    printw("This game is meant to be played in a %d x %d characters window, but the game can't resize it automatically.\nPlease resize the window, or hit Enter to quit.");
-    while(getmaxx(stdscr)!=ini.prefViewportSize[1] && getmaxy(stdscr)!=ini.prefViewportSize[0])
+    printw("This game is meant to be played in a %d x %d characters window, but the game can't resize it automatically.\nPlease resize the window, or hit Enter to quit.", ini.prefViewportSize.x, ini.prefViewportSize.y);
+    while(getmaxx(stdscr)!=ini.prefViewportSize.x && getmaxy(stdscr)!=ini.prefViewportSize.y)
     {
       if(getch()==KEY_ENTER)
       {
@@ -205,10 +191,10 @@ Renderer::Renderer(InitParams ini)
     }
   }
   vector<chtype> row;
-  for(unsigned int i=0; i<_viewportSize[0]; i++)
+  for(unsigned int i=0; i<_viewportSize.y; i++)
   {
     row.clear();
-    for(unsigned int j=0; j<_viewportSize[1]; j++)
+    for(unsigned int j=0; j<_viewportSize.x; j++)
     {
       row.push_back(' '|COLOR_PAIR(1));
     }
@@ -220,8 +206,8 @@ Renderer::Renderer(InitParams ini)
 void Renderer::doCompositing()
 {
   calculateViewportPos();
-  string vpRowPos=to_string(_viewportPos[0]);
-  string vpColPos=to_string(_viewportPos[1]);
+  string vpRowPos=to_string(_viewportPos.y);
+  string vpColPos=to_string(_viewportPos.x);
   for(int i=0; i<vpRowPos.length(); i++)
     overlayLayer[3][i]=vpRowPos[i];
   for(int i=0; i<vpColPos.length(); i++)
@@ -233,9 +219,9 @@ void Renderer::doCompositing()
   for(unsigned int l=0; l<_currentLevel.layerCount(); l++)
   {
     layer=_currentLevel.getLayer(l);
-    for(unsigned int rS=0; rS<_viewportSize[0]; rS++)
+    for(unsigned int rS=0; rS<_viewportSize.y; rS++)
     {
-      rL=(int)floor(_viewportPos[0]*layer->relativeSpeed());
+      rL=(int)(_viewportPos.y*layer->relativeSpeed());
       rL+=rS;
       if(rL>=layer->rows())
       {
@@ -256,7 +242,7 @@ void Renderer::doCompositing()
       }
       for(unsigned int cS=0; cS<_viewportSize[1]; cS++)
       {
-        cL=(int)floor(_viewportPos[1]*layer->relativeSpeed());
+        cL=(int)(_viewportPos.x*layer->relativeSpeed());
         cL+=cS;
         if(cL>=layer->cols())
         {
@@ -298,9 +284,9 @@ void Renderer::doCompositing()
       drawObjects();
     }
   }
-  for(unsigned int i=0; i<_viewportSize[0]; i++)
+  for(unsigned int i=0; i<_viewportSize.y; i++)
   {
-    for(unsigned int j=0; j<_viewportSize[1]; j++)
+    for(unsigned int j=0; j<_viewportSize.x; j++)
     {
       mvaddch(i, j, doTransparency(mvinch(i,j), overlayLayer[i][j]));
     }
@@ -309,23 +295,15 @@ void Renderer::doCompositing()
 
 void Renderer::doTick()
 {
-  ofstream trace;
-  trace.open("traceRendererDoTick.txt");
   for (unsigned int i=0; i<_activeItems.size(); i++)
   {
-    if(_activeItems[i]->isAlive())
+    if(_activeItems[i]->isEnabled())
     {
-      _oldObjectPos[0]=_activeItems[i]->rowPos();
-      _oldObjectPos[1]=_activeItems[i]->colPos();
+      _oldObjectPos.y=_activeItems[i]->rowPos();
+      _oldObjectPos.x=_activeItems[i]->colPos();
       _activeItems[i]->tick();
-      trace<<"called tick for "<<i<<endl;
-      trace.flush();
-      checkCollision(i);
-      trace<<"collision checked for "<<i<<endl;
-      trace.flush();
     }
   }
-  trace.close();
 }
 
 void Renderer::updateScreen()
@@ -335,52 +313,18 @@ void Renderer::updateScreen()
 
 void Renderer::updateRelCameraPos(unsigned int rPos, unsigned int cPos)
 {
-  _prefRelPlayerPos[0]=rPos;
-  _prefRelPlayerPos[1]=cPos;
+  _prefRelViewportPos.y=rPos;
+  _prefRelViewportPos.x=cPos;
 }
 
 void Renderer::loadNewLevel(string path)
 {
-  ifstream levelManifest;
-  levelManifest.open(path+"level.manifest");
-  string tag;
-  int type;
-  string levelPath="";
-  string levelColorPath="";
-  while(levelManifest.good())
-  {
-    levelManifest>>tag;
-    if(tag=="t")
-    {
-      levelManifest>>type;
-    }
-    else if(tag=="l")
-    {
-      levelManifest>>levelPath;
-    }
-    else if(tag=="lc")
-    {
-      levelManifest>>levelColorPath;
-    }
-  }
-  levelManifest.close();
 
-  if(levelPath!="")
-  {
-    if(type==0)
-    {
-      _currentLevel=Level(path+levelPath, path+levelColorPath);
-    }
-    else if(type==1)
-    {
-      _currentLevel=Level(path+levelPath);
-    }
-  }
 }
 
 void Renderer::loadNewLevel(Level level)
 {
-  _currentLevel=level;
+
 }
 
 void Renderer::loadNewObjects(vector<ActiveObject *> newList)
@@ -398,8 +342,6 @@ void Renderer::loadSprites(const string uncookedSpritesPath, const string sprite
 {
   ifstream sprites;
   ifstream spritesColor;
-  ofstream trace;
-  trace.open("traceLoadSprites.txt");
   sprites.open(uncookedSpritesPath);
   spritesColor.open(spriteColorPath);
   vector<vector<vector<chtype> > > aniFrames;
@@ -414,33 +356,23 @@ void Renderer::loadSprites(const string uncookedSpritesPath, const string sprite
   chtype ch;
 
   sprites>>numOfObjects;
-  trace<<numOfObjects<<endl;
-  trace.flush();
   for(int i=0; i<numOfObjects; i++)
   {
     sprites>>numOfFrames;
     aniFrames.clear();
-    trace<<numOfFrames<<endl;
-    trace.flush();
     for(int j=0; j<numOfFrames; j++)
     {
       sprites>>numOfRows;
       sprites>>numOfCols;
       singleFrame.clear();
       getline(sprites, row);
-      trace<<numOfRows<<" "<<numOfCols<<endl;
-      trace.flush();
       for(int k=0; k<numOfRows; k++);
       {
         getline(sprites, row);
         singleRow.clear();
-        trace<<row<<endl;
-        trace.flush();
         for(int l=0; l<numOfCols; l++)
         {
           spritesColor>>colorPair;
-          trace<<"char and its color: "<<row[l]<<" "<<colorPair<<endl;
-          trace.flush();
           ch=row[l]|COLOR_PAIR(colorPair);
           singleRow.push_back(ch);
         }
@@ -452,7 +384,6 @@ void Renderer::loadSprites(const string uncookedSpritesPath, const string sprite
   }
   sprites.close();
   spritesColor.close();
-  trace.close();
 }
 
 void Renderer::loadSprites(const string cookedSpritesPath)
@@ -497,14 +428,8 @@ void Renderer::loadSprites(const string cookedSpritesPath)
 
 void Renderer::checkCollision(unsigned int AOindex)
 {
-  ofstream trace;
-  trace.open("traceCheckCollision.txt");
   checkAObjectsCollision(AOindex);
-  trace<<"done checking AO collision"<<endl;
-  trace.flush();
   checkLevelCollision(AOindex);
-  trace<<"done checking level collision"<<endl;
-  trace.close();
 }
 
 Renderer::~Renderer()
@@ -514,48 +439,29 @@ Renderer::~Renderer()
 
 void Renderer::drawObjects()
 {
-  ofstream trace;
-  trace.open("traceDrawObjects.txt");
   for(unsigned int i=0; i<_activeItems.size(); i++)
   {
-    trace<<"processing item "<<i<<endl;
-    trace.flush();
-    if(_activeItems[i]->isAlive())
+    if(_activeItems[i]->isEnabled())
     {
-      trace<<"item is alive"<<endl;
-      trace.flush();
-      if(_activeItems[i]->rowPos()>=_viewportPos[0] && _activeItems[i]->rowPos()<=(_viewportPos[0]+_viewportSize[0]))
+      if(_activeItems[i]->rowPos()>=_viewportPos.y && _activeItems[i]->rowPos()<=(_viewportPos.y+_viewportSize.y))
       {
-        trace<<"item is in row range"<<endl;
-        trace.flush();
-        if(_activeItems[i]->colPos()>=_viewportPos[1] && _activeItems[i]->colPos()<=(_viewportPos[1]+_viewportSize[1]))
+        if(_activeItems[i]->colPos()>=_viewportPos.x && _activeItems[i]->colPos()<=(_viewportPos.x+_viewportSize.x))
         {
-          trace<<"item is in col range"<<endl;
-          trace.flush();
-          int relPosition[2];
-          relPosition[0]=_activeItems[i]->rowPos()-_viewportPos[0];
-          relPosition[1]=_activeItems[i]->colPos()-_viewportPos[1];
-          trace<<"item's relative pos is "<<relPosition[0]<<","<<relPosition[1]<<endl;
-          trace.flush();
+          Pos relPosition;
+          relPosition.y=_activeItems[i]->rowPos()-_viewportPos.y;
+          relPosition.x=_activeItems[i]->colPos()-_viewportPos.x;
           vector<vector<chtype> > frame=*_activeItems[i]->animate();
-          trace<<"frame obtained"<<endl;
-          trace.flush();
-          trace<<"size of the frame is "<<frame.size()<<","<<frame[0].size()<<endl;
-          trace.flush();
-          for(unsigned int i=0; i<frame.size() && (i+relPosition[0])<(_viewportPos[0]+_viewportSize[0]); i++)
+          for(unsigned int i=0; i<frame.size() && (i+relPosition.y)<(_viewportPos.y+_viewportSize.y); i++)
           {
-            for(unsigned int j=0; j<frame[i].size() && (j+relPosition[1])<(_viewportPos[1]+_viewportSize[1]); j++)
+            for(unsigned int j=0; j<frame[i].size() && (j+relPosition.x)<(_viewportPos.x+_viewportSize.x); j++)
             {
-              mvaddch(relPosition[0]+i, relPosition[1]+j, doTransparency(mvinch(relPosition[0]+i, relPosition[1]+j), frame[i][j]));
-              trace<<"printed character "<<i<<","<<j<<endl;
-              trace.flush();
+              mvaddch(relPosition.y+i, relPosition.x+j, doTransparency(mvinch(relPosition.y+i, relPosition.x+j), frame[i][j]));
             }
           }
         }
       }
     }
   }
-  trace.close();
 }
 
 void Renderer::checkAObjectsCollision(unsigned int AOindex)
@@ -636,58 +542,27 @@ void Renderer::checkAObjectsCollision(unsigned int AOindex)
 
 void Renderer::checkLevelCollision(unsigned int AOindex)
 {
-  ofstream trace;
-  trace.open("traceCheckLevelCollision.txt");
-  trace<<"checking level collision for object "<<AOindex<<endl;
-  trace.flush();
-  trace<<"number of layers is "<<_currentLevel.layerCount()<<endl;
-  trace.flush();
-  trace<<"sprite layer is: "<<_mainLayer<<endl;
-  trace.flush();
   LevelLayer layer=*_currentLevel.getLayer(_mainLayer);
-  trace<<"got copy of layer"<<endl;
-  trace.flush();
   vector<chtype> row;
   int colPos=_activeItems[AOindex]->colPos();
-  trace<<"colPos: "<<colPos<<endl;
-  trace.flush();
   int rowPos=_activeItems[AOindex]->rowPos();
-  trace<<"rowPos: "<<rowPos<<endl;
-  trace.flush();
   int rightEdge=colPos+_activeItems[AOindex]->width()-1;
-  trace<<"rightEdge: "<<rightEdge<<endl;
-  trace.flush();
   int bottomEdge=rowPos+_activeItems[AOindex]->height()-1;
-  trace<<"bottomEdge: "<<bottomEdge<<endl;
-  trace.flush();
   for(int i=rowPos; i<=bottomEdge; i++)
   {
     if(i>=0 && i<layer.rows())
     {
-      trace<<"layer.rows(): "<<layer.rows()<<endl;
-      trace.flush();
       row=layer.getRow(i);
-      trace<<"got row of "<<i<<endl;
-      trace.flush();
       for (int j=colPos; j<=rightEdge; j++)
       {
         if(j>=0 && j<layer.cols())
         {
-          trace<<"layer.cols(): "<<layer.cols()<<endl;
-          trace.flush();
           char t=row[j]&A_CHARTEXT;
-          trace<<"character on location "<<i<<","<<j<<" is "<<t<<endl;
           if(t!=' ')
           {
             //collision detected
-            trace<<"collision detected"<<endl;
-            trace.flush();
             int horVector=colPos-_oldObjectPos[1];
             int verVector=rowPos-_oldObjectPos[0];
-            trace<<"horVector is : "<<horVector;
-            trace.flush();
-            trace<<"verVector is : "<<verVector;
-            trace.flush();
             int newColPos=colPos;
             int newRowPos=rowPos;
             if(horVector<0)
@@ -707,15 +582,12 @@ void Renderer::checkLevelCollision(unsigned int AOindex)
               newRowPos=rowPos-(bottomEdge-i)-1;
             }
             _activeItems[AOindex]->move(newRowPos, newColPos);
-            trace<<"new location - row: "<<newRowPos<<" col: "<<newColPos<<endl;
-            trace.close();
             return;
           }
         }
       }
     }
   }
-  trace.close();
 }
 
 int Renderer::findColorPair(int fg, int bg)
@@ -800,78 +672,78 @@ void Renderer::calculateViewportPos()
   LevelLayer* spriteLayer=_currentLevel.getLayer(_mainLayer);
   bool adjustedRow=false;
   bool adjustedCol=false;
-  int rawViewportPos[2];
-  rawViewportPos[0]=_activeItems[0]->rowPos()-_prefRelPlayerPos[0];
-  rawViewportPos[1]=_activeItems[0]->colPos()-_prefRelPlayerPos[1];
+  Pos rawViewportPos;
+  rawViewportPos.y=_activeItems[0]->rowPos()-_prefRelViewportPos.y;
+  rawViewportPos.x=_activeItems[0]->colPos()-_prefRelViewportPos.x;
   //string vpRowPos=to_string(rawViewportPos[0]);
   //string vpColPos=to_string(rawViewportPos[1]);
   //for(int i=0; i<vpRowPos.length(); i++)
   //  overlayLayer[5][i]=vpRowPos[i];
   //for(int i=0; i<vpColPos.length(); i++)
   //  overlayLayer[6][i]=vpColPos[i];
-  int rawViewportEdge[2];
-  rawViewportEdge[0]=rawViewportPos[0]+_viewportSize[0];
-  rawViewportEdge[1]=rawViewportPos[1]+_viewportSize[1];
+  Pos rawViewportEdge;
+  rawViewportEdge.y=rawViewportPos.y+_viewportSize.y;
+  rawViewportEdge.x=rawViewportPos.x+_viewportSize.x;
   //string vpRowEdge=to_string(rawViewportEdge[0]);
   //string vpColEdge=to_string(rawViewportEdge[1]);
   //for(int i=0; i<vpRowEdge.length(); i++)
   //  overlayLayer[7][i]=vpRowEdge[i];
   //for(int i=0; i<vpColEdge.length(); i++)
   //  overlayLayer[8][i]=vpColEdge[i];
-  if(rawViewportPos[0]<=0)
+  if(rawViewportPos.y<=0)
   {
-    _viewportPos[0]=0;
+    _viewportPos.y=0;
     adjustedRow=true;
   }
-  if(rawViewportPos[1]<=0)
+  if(rawViewportPos.x<=0)
   {
-    _viewportPos[1]=0;
+    _viewportPos.x=0;
     adjustedCol=true;
   }
-  if(rawViewportEdge[0]>=spriteLayer->rows())
+  if(rawViewportEdge.y>=spriteLayer->rows())
   {
-    _viewportPos[0]=spriteLayer->rows()-_viewportSize[0];
+    _viewportPos.y=spriteLayer->rows()-_viewportSize.y;
     adjustedRow=true;
   }
-  if(rawViewportEdge[1]>=spriteLayer->cols())
+  if(rawViewportEdge,x>=spriteLayer->cols())
   {
-    _viewportPos[1]=spriteLayer->cols()-_viewportSize[1];
+    _viewportPos.x=spriteLayer->cols()-_viewportSize.x;
     adjustedCol=true;
   }
   if(adjustedRow==false)
   {
-    _viewportPos[0]=_activeItems[0]->rowPos()-_prefRelPlayerPos[0];
+    _viewportPos.y=_activeItems[0]->rowPos()-_prefRelViewportPos.y;
   }
   if(adjustedCol==false)
   {
-    _viewportPos[1]=_activeItems[0]->colPos()-_prefRelPlayerPos[1];
+    _viewportPos[1]=_activeItems[0]->colPos()-_prefRelViewportPos.x;
   }
 }
 
 void ActiveObject::move(int rPos, int cPos)
 {
-  _pos[0]=rPos;
-  _pos[1]=cPos;
+  _pos.y=rPos;
+  _pos.x=cPos;
 }
 
 int ActiveObject::rowPos()
 {
-  return _pos[0];
+  return _pos.y;
 }
 
 int ActiveObject::colPos()
 {
-  return _pos[1];
+  return _pos.x;
 }
 
 unsigned int ActiveObject::height()
 {
-  return _size[0];
+  return _size.y;
 }
 
 unsigned int ActiveObject::width()
 {
-  return _size[1];
+  return _size.x;
 }
 
 void ActiveObject::disable()
@@ -905,17 +777,11 @@ Level::Level()
 
 Level::Level(const string uncookedLevelPath, const string levelColorPath)
 {
-  ofstream trace;
-  trace.open("traceLevelConstructor.txt");
   ifstream level;
   ifstream levelColor;
   level.open(uncookedLevelPath);
   levelColor.open(levelColorPath);
-  trace<<uncookedLevelPath<<" "<<levelColorPath<<endl;
-  trace.flush();
   level>>_numLayers;
-  trace<<"num of layers: "<<_numLayers<<endl;
-  trace.flush();
   vector<vector<chtype> > layer;
   vector<chtype> singleRow;
   string row;
@@ -931,21 +797,15 @@ Level::Level(const string uncookedLevelPath, const string levelColorPath)
     level>>relativeSpeed;
     level>>tileY;
     level>>tileX;
-    trace<<"height, width, relative speed, tileY, tileX: "<<height<<" "<<width<<" "<<relativeSpeed<<" "<<tileX<<" "<<tileY<<endl;
     getline(level, row);
-    trace.flush();
     layer.clear();
     for(int j=0; j<height; j++)
     {
       singleRow.clear();
       getline(level, row);
-      trace<<row<<endl;
-      trace.flush();
       for(int k=0; k<width; k++)
       {
         levelColor>>colorPair;
-        trace<<"char and its color pair: "<<row[k]<<" "<<colorPair<<endl;
-        trace.flush();
         ch=row[k]|COLOR_PAIR(colorPair);
         singleRow.push_back(ch);
       }
@@ -956,7 +816,6 @@ Level::Level(const string uncookedLevelPath, const string levelColorPath)
 
   level.close();
   levelColor.close();
-  trace.close();
 }
 
 Level::Level(const string cookedLevelPath)
@@ -1013,20 +872,12 @@ LevelLayer::LevelLayer()
 
 LevelLayer::LevelLayer(vector<vector<chtype> > layer, double rSpeed, bool tileHorizontally, bool tileVertically)
 {
-  ofstream trace;
-  trace.open("traceLevelLayerConstructor");
   _rows=layer.size();
-  trace<<"_rows: "<<_rows<<endl;
   _cols=layer[0].size();
-  trace<<"_cols: "<<_cols<<endl;
   _relativeSpeed=rSpeed;
-  trace<<"_relSpeed: "<<_relativeSpeed<<endl;
   _layer=layer;
-  trace<<"layer copy success"<<endl;
   _tileHor=tileHorizontally;
   _tileVer=tileVertically;
-  trace<<"tile settings success, done"<<endl;
-  trace.close();
 }
 
 unsigned int LevelLayer::rows()

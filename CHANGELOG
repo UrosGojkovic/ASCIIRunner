@@ -1,5 +1,21 @@
+2016-05-21  Uros Gojkovic  <uros.gojkovic@hotmail.com>
+
+  * asciirunner.h: Removed classes Coin, Player and Menu since they are not essential to the current development.
+  Removed some other unused methods from Game class.
+
+  * asciirunner.cpp: removed classes Coin, Player and Menu.
+  Removed some other unused methods from Game class.
+  (Game::Game(QCoreApplication* parent)): Removed the option of random levels.
+  (Game::generateObjectList()): Removed the body since it's not used at the moment.
+  (Camera::Camera()): Replaced _pos and _size array.
+  Removed tracing code everywhere.
+
+  * asciirenderengine.cpp (Renderer::Renderer(InitParams ini)): Rearranged initialzation steps to make more sense.
+  Removed tracing code everywhere.
+  Replaced the size and position arrays everywhere.
+
 2016-04-19  Uros Gojkovic  <uros.gojkovic@hotmail.com> 
 
- * asciirenderengine.h: refactored the code
-    added Pos and Size structs instead of _pos[2] and _size[2] arrays
-    all coments are updated and in English now
+  * asciirenderengine.h: Refactored the code.
+    Added Pos and Size structs instead of _pos[2] and _size[2] arrays.
+    All coments are updated and in English now.
